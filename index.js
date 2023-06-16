@@ -1,17 +1,32 @@
-import data from './data.json' assert { type: "json" };
-import { Flight } from './models/Flight.js';
+import flights from './data.json' assert { type: "json" };
 
-const flights = [];
-let solution = [];
+const dateDepartureBusAtLondonAirport = new Date(2010, 7, 27, 17, 0, 0);
+const dateArrivalBusAtLondonAirport = new Date(2010, 7, 3, 15, 0, 0);
+const countries = ["TXL", "CDG", "MRS", "LYS", "MAN", "BIO", "JFK", "TUN", "MXP"];
 
-data.forEach(flight => {
-    flights.push(new Flight(flight));
-});
+function generateRandomSolution(){
+    const solution = []
+
+    // pour chaque pays génère la liste des vols allés (vols arrivant le 28 juillet à Londre à 17h max) / retours (vols partant de Londre le 3 août à 15h min) 
+    // puis récupère une valeur aléatoir de chaque liste
+    for (const country of countries) {
+
+        const arrivalFlightsToLondon = flights.filter(flight => flight.destination === "LHR" && flight.origin === country && new Date(flight.arrival_time) <= dateDepartureBusAtLondonAirport);
+        const departureFlightsFromLondon = flights.filter(flight => flight.origin === "LHR" && flight.destination === country && new Date(flight.departure_time) >= dateArrivalBusAtLondonAirport);
+        
+        const randomArrivalFlight = arrivalFlightsToLondon[Math.floor(Math.random() * arrivalFlightsToLondon.length)];
+        const randomDepartureFlight = departureFlightsFromLondon[Math.floor(Math.random() * departureFlightsFromLondon.length)];
+    
+        solution.push(randomArrivalFlight);
+        solution.push(randomDepartureFlight);
+      }
+
+      return solution;
+}
 
 function computeCost(solution) {
-    const dateDepartureBusFromAirport = new Date(2023, 7, 27, 17, 0, 0);
-    const dateArrivalBusAirport = new Date(2023, 8, 3, 15, 0, 0);
-    const halfHourCost = 5;
+
+    const halfHourCost = 5; // each half hour of waiting time cost 5
 
     let cost = 0;
     // Get the prices of the flights
@@ -19,23 +34,37 @@ function computeCost(solution) {
         cost += flight.price;
     });
 
-    // Add the cost of the waiting time at the airport at arrival to LHR
+    // Add the cost of the waiting time in arrival to LHR airport
     solution
         .filter(flight => flight.destination === "LHR")
         .forEach(flight => {
-            const waitingTime = (dateDepartureBusFromAirport - new Date(flight.arrival_time)) / 60000;
+            const waitingTime = (dateDepartureBusAtLondonAirport - new Date(flight.arrival_time)) / 60000;
             cost += Math.floor(waitingTime / 30) * halfHourCost;
         });
 
         
-    // Add the cost of the waiting time at the airport at departure from LHR
+    // Add the cost of the waiting time in departure from LHR airport
     solution
         .filter(flight => flight.origin === "LHR")
         .forEach(flight => {
-            const waitngTime = (new Date(flight.departure_time - dateArrivalBusAirport)) / 60000;
-            cost += Math.floor(waitngTime / 30) * halfHourCost;
+            const waitingTime = (new Date(flight.departure_time) - dateArrivalBusAtLondonAirport) / 60000;
+            cost += Math.floor(waitingTime / 30) * halfHourCost;
         });
 
     // Add the cost of the bus
     return cost + 100;
 }
+
+const randomSolution = generateRandomSolution();
+const cost = computeCost(randomSolution)
+
+for (const flight of randomSolution) {
+  console.log("Flight details:");
+  console.log("Price:", flight.price+" $");
+  console.log("Origin:", flight.origin);
+  console.log("Destination:", flight.destination);
+  console.log("Departure time:", flight.departure_time);
+  console.log("Arrival time:", flight.arrival_time);
+  console.log("-----------------------");
+}
+console.log("La solution coute: "+ cost +" $")
